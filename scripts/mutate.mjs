@@ -101,16 +101,29 @@ function classify(output) {
   return null;
 }
 
+/**
+ * Apply every patch of a mutation, requiring each anchor to occur EXACTLY
+ * once.
+ *
+ * "Exactly once" is the whole guard. An anchor that matches twice patches a
+ * site nobody intended; an anchor that matches zero times patches nothing and
+ * leaves a green run that reads as a survivor. Both are the failure this
+ * script exists to make impossible, so neither is tolerated.
+ */
 function applyPatch(mutation) {
   const path = join(ROOT, mutation.file);
   const before = readFileSync(path, 'utf8');
-  const occurrences = before.split(mutation.anchor).length - 1;
-  if (occurrences !== 1) {
-    return { error: `anchor occurs ${occurrences} times, must be exactly 1` };
+  let text = before;
+  for (const [i, patch] of mutation.patches.entries()) {
+    const occurrences = text.split(patch.anchor).length - 1;
+    if (occurrences !== 1) {
+      writeFileSync(path, before);
+      return { error: `patch ${i + 1}: anchor occurs ${occurrences} times, must be exactly 1` };
+    }
+    text = text.replace(patch.anchor, patch.replacement);
   }
-  const after = before.replace(mutation.anchor, mutation.replacement);
-  if (after === before) return { error: 'patch produced no change' };
-  writeFileSync(path, after);
+  if (text === before) return { error: 'patches produced no change' };
+  writeFileSync(path, text);
   return { before, path };
 }
 

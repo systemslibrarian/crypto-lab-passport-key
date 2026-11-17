@@ -65,6 +65,30 @@ describe('the parity adjustment (Section 9.7.1.1)', () => {
     expect(toHex(adjustParity(once))).toBe(toHex(once));
   });
 
+  it('is actually applied BY THE DERIVATION, not merely available', () => {
+    /**
+     * The gap the mutation runner found.
+     *
+     * Every other test in this block calls `adjustParity` directly, so all of
+     * them pass with the call REMOVED from `deriveKey` — the function was
+     * tested and its use was not. Mutation 5 survived against this block for
+     * exactly that reason, and was caught only by the Appendix D comparison in
+     * the next block, which is not where a reader would look for it.
+     *
+     * So this reaches through the derivation: the key `deriveKey` returns must
+     * have odd parity, and must differ from the raw hash bytes it also
+     * returns.
+     */
+    const seed = fromHex(ICAO_APPENDIX_D.kSeed);
+    for (const counter of [COUNTER_ENC, COUNTER_MAC]) {
+      const derived = deriveKey(seed, counter);
+      expect(hasOddParity(derived.key), `counter ${counter}`).toBe(true);
+      expect(hasOddParity(derived.beforeParity), `counter ${counter} raw bytes`).toBe(false);
+      expect(toHex(derived.key), `counter ${counter}`).not.toBe(toHex(derived.beforeParity));
+      expect(toHex(derived.key)).toBe(toHex(adjustParity(derived.beforeParity)));
+    }
+  });
+
   it('CHANGES THE KEY BYTES but no ciphertext — mutation 5', () => {
     /**
      * The whole reason `DerivedKey` keeps both forms.
