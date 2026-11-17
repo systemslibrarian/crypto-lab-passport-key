@@ -1,10 +1,10 @@
 /**
  * The search worker.
  *
- * The search is a tight synchronous loop over millions of candidates, so it
- * cannot run on the main thread: it would freeze the page, and a frozen page
- * cannot show a progress count or offer a Cancel button — the two things that
- * make the exhibit honest about how long this takes.
+ * The search is a tight loop over millions of candidates, so it cannot run on
+ * the main thread: it would freeze the page, and a frozen page cannot show a
+ * progress count or offer a Cancel button — the two things that make the
+ * exhibit honest about how long this takes.
  *
  * The worker imports `search.ts` directly rather than carrying its own copy of
  * the derivation. That is deliberate: if the worker had its own SHA-1 or its
@@ -23,8 +23,34 @@
  *
  * `assertNoSecrets` runs on the received task before the search starts, so
  * invariant 3 is enforced at the boundary a type cannot cross.
+ *
+ * ## Cancelling a worker that is busy — and why a callback was not enough
+ *
+ * A worker handler runs to completion before the worker reads another message.
+ * The first version of this file ran a fully synchronous `search()` inside
+ * `onmessage` and claimed in a comment that reporting progress let the queue
+ * turn. IT DID NOT: calling a callback is not yielding, so a `cancel` posted
+ * mid-search sat unread until the search finished, and the Cancel button was
+ * decorative. The claims suite caught it — the cancelled verdict never
+ * appeared.
+ *
+ * So the search is a GENERATOR, and this loop awaits a real macrotask between
+ * chunks. `setTimeout` and not `queueMicrotask`: a posted message is a
+ * macrotask, and microtasks all drain before the next one is delivered, so a
+ * microtask yield would read the queue exactly as never as before.
+ *
+ * `CHUNK` is the trade. Too large and Cancel feels dead; too small and the
+ * event-loop turns cost more than the cryptography. At the rate this measures
+ * in a browser, 16,384 candidates is on the order of 50ms.
  */
-import { assertNoSecrets, search, type SearchProgress, type SearchOutcome, type SearchTask } from './search';
+import {
+  assertNoSecrets,
+  cancelledAt,
+  searchSteps,
+  type SearchOutcome,
+  type SearchProgress,
+  type SearchTask,
+} from './search';
 
 export type SearchWorkerRequest =
   | { readonly type: 'search'; readonly task: SearchTask }
@@ -35,29 +61,20 @@ export type SearchWorkerResponse =
   | { readonly type: 'outcome'; readonly outcome: SearchOutcome }
   | { readonly type: 'error'; readonly message: string };
 
-/**
- * Cancellation, across a thread that is busy.
- *
- * A worker running a synchronous loop never reaches its message queue, so a
- * `{ type: 'cancel' }` posted mid-search would sit unread until the search
- * finished — by which time cancelling is meaningless. The loop therefore
- * yields to the queue every chunk: `search`'s `onProgress` hook returns false
- * once this flag is set, and the flag is set by a message handler that only
- * runs because the chunk boundary let the event loop turn.
- *
- * `chunkSize` is the trade. Too large and Cancel feels dead; too small and the
- * event-loop turns cost more than the cryptography. 8,192 candidates is about
- * a tenth of a second at the measured rate.
- */
-let cancelled = false;
+const CHUNK = 16_384;
 
-const CHUNK = 8192;
+let cancelled = false;
 
 function post(message: SearchWorkerResponse): void {
   self.postMessage(message);
 }
 
-self.onmessage = (event: MessageEvent<SearchWorkerRequest>): void => {
+/** Hand the event loop a real turn, so a queued `cancel` can be delivered. */
+function yieldToQueue(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+self.onmessage = async (event: MessageEvent<SearchWorkerRequest>): Promise<void> => {
   const request = event.data;
 
   if (request.type === 'cancel') {
@@ -70,16 +87,20 @@ self.onmessage = (event: MessageEvent<SearchWorkerRequest>): void => {
   cancelled = false;
   try {
     assertNoSecrets(request.task);
-    const outcome = search(request.task, {
-      chunkSize: CHUNK,
-      onProgress: (progress) => {
-        post({ type: 'progress', progress });
-        // A cancel can only have arrived if this chunk boundary let the event
-        // loop run, which is the whole reason the loop reports at all.
-        return !cancelled;
-      },
-    });
-    post({ type: 'outcome', outcome });
+    const steps = searchSteps(request.task, CHUNK);
+    let step = steps.next();
+    while (!step.done) {
+      post({ type: 'progress', progress: step.value });
+      // The yield is what makes cancellation possible at all. After it, this
+      // worker's `onmessage` has had a chance to run and set the flag.
+      await yieldToQueue();
+      if (cancelled) {
+        post({ type: 'outcome', outcome: cancelledAt(step.value) });
+        return;
+      }
+      step = steps.next();
+    }
+    post({ type: 'outcome', outcome: step.value });
   } catch (error) {
     post({ type: 'error', message: error instanceof Error ? error.message : String(error) });
   }

@@ -4,12 +4,15 @@
  * Wraps the `postMessage` protocol in a promise with progress callbacks and a
  * cancel method, so the UI never touches a raw `MessageEvent`.
  *
- * Cancellation has a subtlety worth naming: a worker in a synchronous loop
- * cannot read its own message queue, so `cancel()` is only observed at the
- * next chunk boundary. That is normally within a tenth of a second, but it is
- * not instant, and the UI reflects that by disabling the button and waiting
- * for the worker's own `cancelled` outcome rather than declaring the search
- * stopped on its own authority.
+ * Cancellation has a subtlety worth naming: a worker handler runs to
+ * completion before the worker reads another message, so `cancel()` is only
+ * observed once the search's generator suspends and the worker awaits a
+ * macrotask — the next chunk boundary. That is normally a few tens of
+ * milliseconds, but it is not instant, and the UI reflects that by disabling
+ * the button and waiting for the worker's OWN `cancelled` outcome rather than
+ * declaring the search stopped on its own authority. (An earlier version ran
+ * the search synchronously in the handler, which made cancellation impossible
+ * rather than merely delayed; see `search.worker.ts`.)
  */
 import type { SearchOutcome, SearchProgress, SearchTask } from './search';
 import { assertNoSecrets } from './search';

@@ -195,32 +195,51 @@ export function assertNoSecrets(task: SearchTask): void {
 export interface SearchHooks {
   /** Called every `chunkSize` candidates. Return false to stop the search. */
   readonly onProgress?: (progress: SearchProgress) => boolean | void;
-  /** How many candidates to try between progress callbacks. */
+  /** How many candidates to try between progress reports. */
   readonly chunkSize?: number;
   /** Supplies the clock, so a test can make the rate deterministic. */
   readonly now?: () => number;
 }
 
+/** The default chunk: how many candidates run between progress reports. */
+export const DEFAULT_CHUNK = 8192;
+
 /**
- * Try every candidate in the declared space against the recording.
+ * The search, as a generator that yields progress at every chunk boundary.
+ *
+ * THIS IS THE ONLY IMPLEMENTATION. `search()` below drives it synchronously
+ * for tests, and the worker drives it asynchronously so that it can read its
+ * own message queue between chunks. A second copy of this loop could drift
+ * from the derivation the page displays, which is the whole thing exhibit 5
+ * rests on.
+ *
+ * ## Why a generator rather than a callback
+ *
+ * The first version of this took an `onProgress` callback and ran straight
+ * through. That works in a test and CANNOT WORK IN A WORKER: a synchronous
+ * function never returns to the event loop, so a `{ type: 'cancel' }` message
+ * posted to the worker sits unread in the queue until the search finishes —
+ * by which time cancelling is meaningless. Calling a callback is not yielding.
+ * A generator genuinely suspends, so the worker can `await` a macrotask
+ * between chunks and let its own `onmessage` run.
  *
  * The loop is arranged so that everything independent of the candidate is
  * computed once:
  *
  *  - the document number and its check digit become a fixed string prefix;
  *  - each date's check digit is computed once per date rather than once per
- *    pair, which matters because the outer loop's date is reused across the
- *    whole inner loop;
- *  - the recorded E_IFD is padded once, outside everything.
+ *    pair, since the outer loop's date is reused across the whole inner loop.
  *
  * What is NOT hoisted is the comparison: `bytesEqual` walks all eight bytes of
  * the MAC every time. Comparing only the first four would be about as fast and
  * would accept roughly one wrong candidate in four billion — mutation 12.
  */
-export function search(task: SearchTask, hooks: SearchHooks = {}): SearchOutcome {
+export function* searchSteps(
+  task: SearchTask,
+  chunkSize: number = DEFAULT_CHUNK,
+  now: () => number = () => performance.now()
+): Generator<SearchProgress, SearchOutcome, void> {
   assertNoSecrets(task);
-  const now = hooks.now ?? (() => performance.now());
-  const chunkSize = hooks.chunkSize ?? 4096;
 
   const documentNumber = padDocumentNumber(task.known.documentNumber);
   const prefix = documentNumber + checkDigit(documentNumber);
@@ -245,7 +264,9 @@ export function search(task: SearchTask, hooks: SearchHooks = {}): SearchOutcome
     for (let e = 0; e < expiryFields.length; e++) {
       const candidate = withBirth + expiryFields[e];
 
-      // Printed data -> K_seed -> K_MAC, exactly as the chip does it.
+      // Printed data -> K_seed -> K_MAC, exactly as the chip does it. Only
+      // counter 2 is needed to TEST a candidate; K_Enc is derived once, after
+      // a hit, to decrypt.
       const kSeed = sha1(ascii(candidate)).subarray(0, K_SEED_BYTES);
       const kMac = adjustParity(sha1(concat(kSeed, macCounter)).subarray(0, 16));
 
@@ -270,21 +291,7 @@ export function search(task: SearchTask, hooks: SearchHooks = {}): SearchOutcome
       if (sinceReport >= chunkSize) {
         sinceReport = 0;
         const elapsedMs = now() - started;
-        const keepGoing = hooks.onProgress?.({
-          tried,
-          total,
-          elapsedMs,
-          guessesPerSecond: rate(tried, elapsedMs),
-        });
-        if (keepGoing === false) {
-          return {
-            outcome: 'cancelled',
-            tried,
-            total,
-            elapsedMs,
-            guessesPerSecond: rate(tried, elapsedMs),
-          };
-        }
+        yield { tried, total, elapsedMs, guessesPerSecond: rate(tried, elapsedMs) };
       }
     }
   }
@@ -297,6 +304,35 @@ export function search(task: SearchTask, hooks: SearchHooks = {}): SearchOutcome
     elapsedMs,
     guessesPerSecond: rate(tried, elapsedMs),
   };
+}
+
+/** A progress report turned into a cancellation outcome. */
+export function cancelledAt(progress: SearchProgress): SearchCancelled {
+  return {
+    outcome: 'cancelled',
+    tried: progress.tried,
+    total: progress.total,
+    elapsedMs: progress.elapsedMs,
+    guessesPerSecond: progress.guessesPerSecond,
+  };
+}
+
+/**
+ * Drive the search to completion synchronously.
+ *
+ * Used by the unit tests, where there is no event loop to share and an
+ * `onProgress` hook returning false is a perfectly good cancel. The worker
+ * does NOT use this — see `searchSteps` for why.
+ */
+export function search(task: SearchTask, hooks: SearchHooks = {}): SearchOutcome {
+  const steps = searchSteps(task, hooks.chunkSize ?? DEFAULT_CHUNK, hooks.now);
+  let step = steps.next();
+  while (!step.done) {
+    const keepGoing = hooks.onProgress?.(step.value);
+    if (keepGoing === false) return cancelledAt(step.value);
+    step = steps.next();
+  }
+  return step.value;
 }
 
 function rate(tried: number, elapsedMs: number): number {

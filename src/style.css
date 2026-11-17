@@ -1,0 +1,944 @@
+/**
+ * Passport Key — the lab's own styles.
+ *
+ * Dark is the only theme, pinned with a literal in index.html before first
+ * paint. There is no toggle and no `prefers-color-scheme` anywhere in this
+ * file: a light palette for a page this dense in hex columns read badly across
+ * the fleet, and a single past click used to pin a returning visitor to it.
+ *
+ * ## The palette, and why each token exists
+ *
+ * Every pair below was measured arithmetically against its WCAG threshold
+ * before it was written, because the accessibility gate measures contrast and
+ * not intent. The margins, on the surface each is used over:
+ *
+ *   --text on --surface            15.05:1   (needs 4.5)
+ *   --text-dim on --surface         7.92:1   (needs 4.5)
+ *   --accent as text on --surface   7.49:1   (needs 4.5)
+ *   --pass / --fail / --alarm       9.58 / 7.73 / 10.04:1
+ *   --accent-ink on --accent fill   7.71:1   (needs 4.5)
+ *   --control-border on --surface   4.25:1   (needs 3 — WCAG 1.4.11)
+ *
+ * Two of those tokens are the ones labs get wrong, so they are named
+ * deliberately rather than borrowed:
+ *
+ *  - `--accent-ink` is the INK FOR TEXT SITTING ON the accent. #d1a05a is a
+ *    warm mid gold: near-white on it measures 2.37:1, so the ink has to be
+ *    dark. It is derived from this lab's own accent rather than copied from a
+ *    lab whose accent is dark, which is how a crimson accent ends up shipping
+ *    teal ink and passing the gate — the gate measures ratio, not hue.
+ *  - `--control-border` is the boundary of an interactive control, judged
+ *    against the surface OUTSIDE it. `--border` is a decorative divider at
+ *    1.4:1 and is never used on a control; using it there is the 1.78:1 button
+ *    border this fleet keeps producing.
+ */
+
+:root {
+  /* The catalog accent for this lab. The shared top bar falls back to teal
+     when this is missing, which is why it is defined here and not in a
+     component. */
+  --accent: #d1a05a;
+  /* Text ON an accent (or verdict) fill. Dark, because this accent is light. */
+  --accent-ink: #1c1408;
+  /* The accent used AS text on the page's own surfaces. The same hue works
+     directly here — 7.49:1 on --surface — so no separate token is needed, but
+     it is named so a future palette change has somewhere to diverge. */
+  --accent-text: var(--accent);
+
+  --bg: #12100c;
+  --surface: #1b1813;
+  --surface-2: #241f18;
+
+  --text: #f2ece1;
+  --text-dim: #b8ac98;
+
+  /* Decorative dividers only — 1.4:1, nowhere near a control boundary. */
+  --border: #3a3228;
+  /* Interactive control boundaries. WCAG 1.4.11 wants 3:1; this is 4.25:1. */
+  --control-border: #8a7a63;
+
+  --pass: #5fd49a;
+  --fail: #ff8a7a;
+  --alarm: #ffb454;
+  --info: #86c5e8;
+
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  color-scheme: dark;
+}
+
+/* The longhand, not the `background` shorthand: axe and WebKit both miss the
+   shorthand when deciding what a text node is painted over. */
+html {
+  background-color: var(--bg);
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+/* Scoped to #app, not global: the shared .cl-topbar is always dark and
+   self-contained, and a global p{} / button{} rule fights it. */
+#app {
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: 0 clamp(1rem, 3vw, 2rem) 3rem;
+}
+
+#app p {
+  margin: 0 0 0.9rem;
+}
+
+#app h2 {
+  margin: 0 0 0.5rem;
+  font-size: clamp(1.15rem, 2.2vw, 1.4rem);
+  line-height: 1.25;
+}
+
+#app h3 {
+  margin: 1.6rem 0 0.6rem;
+  font-size: 1.02rem;
+  letter-spacing: 0.01em;
+}
+
+#app h4 {
+  margin: 1.1rem 0 0.4rem;
+  font-size: 0.92rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+/* An inline link keeps a persistent underline: colour alone is not a
+   distinction (WCAG 1.4.1). */
+#app a {
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+#app a:hover {
+  text-decoration-thickness: 2px;
+}
+
+/* ── Hero (the fleet standard) ─────────────────────────────────────────────── */
+
+.cl-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: clamp(1rem, 4vw, 3rem);
+  flex-wrap: wrap;
+  margin: clamp(1rem, 3vw, 2rem) 0 1.5rem;
+}
+.cl-hero-main {
+  flex: 1 1 22rem;
+  min-width: min(100%, 20rem);
+}
+.cl-hero-title {
+  margin: 0;
+  font-size: clamp(1.6rem, 3.8vw, 2.7rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+}
+.cl-hero-sub {
+  margin: 0.4rem 0 0;
+  font-size: clamp(0.9rem, 1.6vw, 1.05rem);
+  letter-spacing: 0.01em;
+  /* A lightness step, never opacity: opacity composites and axe cannot
+     resolve what the result is painted over. */
+  color: var(--text-dim);
+}
+.cl-hero-desc {
+  margin: 0.55rem 0 0;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--text-dim);
+  max-width: 60ch;
+}
+.cl-hero-why {
+  flex: 0 1 min(40%, 26rem);
+  min-width: min(100%, 15rem);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.85rem 1.05rem;
+  background: color-mix(in oklab, var(--accent) 6%, transparent);
+}
+.cl-hero-why-label {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--accent-text);
+}
+.cl-hero-why-text {
+  margin: 0.35rem 0 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+/* The mobile query resets .cl-hero-main as well as .cl-hero-why: `flex:1 1
+   22rem` is a ROW basis, and once the direction is column that 22rem is read
+   as a height, reserving dead space under the title at every width below
+   640px. */
+@media (max-width: 640px) {
+  .cl-hero {
+    flex-direction: column;
+  }
+  .cl-hero-main {
+    flex-basis: auto;
+    min-width: 0;
+  }
+  .cl-hero-why {
+    flex-basis: auto;
+    width: 100%;
+  }
+}
+
+/* ── Tabs ─────────────────────────────────────────────────────────────────── */
+
+.tabs {
+  margin: 1.5rem 0 0;
+}
+
+.tab-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.tab-btn {
+  padding: 0.5rem 0.85rem;
+  border: 1px solid var(--control-border);
+  border-radius: 9px 9px 0 0;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.86rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.tab-btn:hover {
+  background: var(--surface-2);
+  /* The hover fill gets an edge of its own: a repainted fill with no boundary
+     is a 1.07:1 control, which is the 1.4.11 failure this fleet keeps
+     shipping on tab hovers. */
+  border-color: var(--accent);
+}
+
+.tab-btn[aria-selected='true'] {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+  font-weight: 700;
+}
+
+.tab-btn:focus-visible,
+#app button:focus-visible,
+#app input:focus-visible,
+#app select:focus-visible,
+#app summary:focus-visible,
+#app a:focus-visible,
+#app [tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── Panels ───────────────────────────────────────────────────────────────── */
+
+.panel {
+  border: 1px solid var(--border);
+  border-radius: 0 10px 10px 10px;
+  background: var(--surface);
+  padding: clamp(1rem, 2.5vw, 1.6rem);
+  animation: fade 0.18s ease-out;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+}
+
+.panel-intro {
+  max-width: 68ch;
+}
+
+/* The plain-language on-ramp. Every panel opens with one. */
+.lede {
+  font-size: 1.04rem;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.scope-note {
+  margin: 0.75rem 0 1.2rem;
+  padding: 0.6rem 0.9rem;
+  border-left: 3px solid var(--control-border);
+  background: var(--surface-2);
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  max-width: 72ch;
+}
+
+/* ── Cards and layout ─────────────────────────────────────────────────────── */
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  padding: 0.9rem 1.05rem;
+  margin: 0.9rem 0;
+}
+
+.card > h3:first-child,
+.card > h4:first-child {
+  margin-top: 0;
+}
+
+.columns {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+
+.three-up {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 860px) {
+  .three-up {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Values, hex and the MRZ ───────────────────────────────────────────────── */
+
+/* Tabular figures so a column of hex lines up digit over digit. */
+.hex,
+.value,
+.mrz {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  /* A 64-character hex run must wrap rather than widen the document: WCAG
+     1.4.10 at 320px. */
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.hex {
+  font-size: 0.88rem;
+  letter-spacing: 0.02em;
+}
+
+.field {
+  display: grid;
+  grid-template-columns: minmax(8rem, 14rem) 1fr;
+  gap: 0.3rem 0.9rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.field:last-child {
+  border-bottom: none;
+}
+
+.field-label {
+  font-size: 0.82rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.field-value {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.88rem;
+  overflow-wrap: anywhere;
+}
+
+.field-note {
+  grid-column: 1 / -1;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+}
+
+@media (max-width: 560px) {
+  .field {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* The printed machine-readable zone. */
+.mrz-block {
+  margin: 0.8rem 0;
+  padding: 0.8rem;
+  border: 1px solid var(--control-border);
+  border-radius: 8px;
+  background: var(--bg);
+  overflow-x: auto;
+}
+
+.mrz {
+  font-size: clamp(0.72rem, 1.9vw, 1rem);
+  letter-spacing: 0.08em;
+  white-space: pre;
+  margin: 0;
+}
+
+.mrz-line {
+  display: block;
+}
+
+/* A character the key derivation actually consumes. Marked three ways — a
+   background, a weight and an underline — never by colour alone. */
+.mrz-hashed {
+  background: color-mix(in oklab, var(--accent) 26%, transparent);
+  color: var(--text);
+  font-weight: 700;
+  border-bottom: 2px solid var(--accent);
+}
+
+.mrz-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.2rem;
+  margin: 0.5rem 0 0;
+  font-size: 0.84rem;
+  color: var(--text-dim);
+}
+
+/* ── Tables ───────────────────────────────────────────────────────────────── */
+
+.table-wrap {
+  overflow-x: auto;
+  margin: 0.9rem 0;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+caption {
+  text-align: left;
+  font-size: 0.84rem;
+  color: var(--text-dim);
+  padding-bottom: 0.4rem;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+th {
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  font-weight: 700;
+}
+
+td.num,
+th.num {
+  text-align: right;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ── Verdicts ─────────────────────────────────────────────────────────────── */
+
+/**
+ * Colour tracks SYSTEM INTEGRITY, not the raw return value.
+ *
+ * `.verdict-alarm` is the one that matters here: exhibit 5 reaches a state
+ * where every check the protocol performs reports success AND the recording
+ * has been opened by a searcher who never touched the passport. That is not a
+ * green outcome, so it does not get the green token — it gets the alarm tone,
+ * and its text says both halves.
+ *
+ * Every verdict carries an icon, a word and a colour. Never colour alone.
+ */
+.verdict {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin: 0.9rem 0;
+  padding: 0.7rem 0.95rem;
+  border-radius: 9px;
+  border: 1px solid;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.verdict-icon {
+  flex: 0 0 auto;
+  font-weight: 700;
+  font-family: var(--mono);
+}
+
+.verdict-text {
+  font-weight: 600;
+}
+
+.verdict-detail {
+  display: block;
+  margin-top: 0.3rem;
+  font-weight: 400;
+  color: var(--text-dim);
+}
+
+.verdict-pass {
+  border-color: var(--pass);
+  background: color-mix(in oklab, var(--pass) 12%, var(--surface));
+  color: var(--pass);
+}
+
+.verdict-fail {
+  border-color: var(--fail);
+  background: color-mix(in oklab, var(--fail) 12%, var(--surface));
+  color: var(--fail);
+}
+
+.verdict-alarm {
+  border-color: var(--alarm);
+  background: color-mix(in oklab, var(--alarm) 14%, var(--surface));
+  color: var(--alarm);
+}
+
+.verdict-info {
+  border-color: var(--info);
+  background: color-mix(in oklab, var(--info) 10%, var(--surface));
+  color: var(--info);
+}
+
+/* A verdict's own prose stays at body contrast rather than inheriting the
+   tone, which would put a coloured sentence on a tinted fill. */
+.verdict .verdict-body {
+  color: var(--text);
+  font-weight: 400;
+}
+
+/**
+ * Evidence retirement.
+ *
+ * Any change to an input retires the verdict it produced rather than leaving
+ * it on screen next to data it no longer describes. The retired notice says
+ * WHAT changed, so a reader is told the verdict went away on purpose.
+ */
+.evidence-retired {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0.9rem 0;
+  padding: 0.6rem 0.9rem;
+  border: 1px dashed var(--control-border);
+  border-radius: 9px;
+  background: var(--surface-2);
+  color: var(--text-dim);
+  font-size: 0.9rem;
+}
+
+/* ── Controls ─────────────────────────────────────────────────────────────── */
+
+#app button {
+  font: inherit;
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 0.45rem 0.9rem;
+  /* Every control gets a 3:1 boundary. --border would be 1.4:1. */
+  border: 1px solid var(--control-border);
+  background: var(--surface);
+  color: var(--text);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+#app button:hover:not(:disabled) {
+  background: var(--surface-2);
+  border-color: var(--accent);
+}
+
+#app button:disabled {
+  /* A lightness step, not opacity — see --text-dim. A disabled control is
+     exempt from 1.4.3 and 1.4.11, but it still has to be readable. */
+  color: var(--text-dim);
+  border-color: var(--border);
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+  font-weight: 700;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--accent) 86%, #ffffff);
+  border-color: color-mix(in oklab, var(--accent) 86%, #ffffff);
+  color: var(--accent-ink);
+}
+
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.9rem 0;
+  align-items: center;
+}
+
+#app input[type='text'],
+#app input[type='number'] {
+  font-family: var(--mono);
+  font-size: 0.92rem;
+  padding: 0.42rem 0.6rem;
+  border: 1px solid var(--control-border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  min-width: 0;
+}
+
+#app input[aria-invalid='true'] {
+  border-color: var(--fail);
+  /* Not colour alone: the field also gets a message beside it, and the
+     message names the field and the fix. */
+  border-width: 2px;
+}
+
+/* A styled select needs `appearance: none` plus a custom chevron, or the
+   platform control ignores the palette entirely. */
+#app select {
+  appearance: none;
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0.42rem 2rem 0.42rem 0.6rem;
+  border: 1px solid var(--control-border);
+  border-radius: 8px;
+  background-color: var(--bg);
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-dim) 50%),
+    linear-gradient(135deg, var(--text-dim) 50%, transparent 50%);
+  background-position: calc(100% - 1.05rem) 55%, calc(100% - 0.65rem) 55%;
+  background-size: 0.4rem 0.4rem, 0.4rem 0.4rem;
+  background-repeat: no-repeat;
+  color: var(--text);
+}
+
+.control-grid {
+  display: grid;
+  gap: 0.7rem 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  margin: 0.9rem 0;
+}
+
+.control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.control label {
+  font-size: 0.82rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.control-hint {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.field-error {
+  margin: 0.3rem 0 0;
+  font-size: 0.85rem;
+  color: var(--fail);
+  font-weight: 600;
+}
+
+/* ── The three columns of the handshake ───────────────────────────────────── */
+
+.party {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  padding: 0.85rem 0.95rem;
+}
+
+.party-label {
+  display: block;
+  margin: 0 0 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+}
+
+/**
+ * The eavesdropper's column.
+ *
+ * It shows only what crossed the air, and that is a claim the claims suite
+ * checks: no key, no nonce and no printed data may appear inside
+ * `.party-eavesdropper` while the handshake is running. The dashed boundary
+ * marks it as a different kind of column — an observer, not a participant.
+ */
+.party-eavesdropper {
+  border-style: dashed;
+  border-color: var(--control-border);
+}
+
+.party-eavesdropper .party-label {
+  color: var(--text-dim);
+}
+
+.wire-note {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  margin: 0.5rem 0 0;
+}
+
+/* ── The step-through ─────────────────────────────────────────────────────── */
+
+.steps {
+  margin: 0.9rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: 2rem 1fr;
+  gap: 0.2rem 0.7rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.step:last-child {
+  border-bottom: none;
+}
+
+.step-number {
+  font-family: var(--mono);
+  font-weight: 700;
+  color: var(--accent-text);
+}
+
+.step-body > :first-child {
+  margin-top: 0;
+}
+
+.step-title {
+  font-weight: 600;
+  margin: 0 0 0.2rem;
+}
+
+.step-progress {
+  font-family: var(--mono);
+  font-size: 0.88rem;
+  color: var(--text-dim);
+}
+
+/* A revealed step. The reduced-motion block below cancels the animation and
+   the static opacity:1 is what remains, so a reduced-motion reader sees the
+   end state rather than a permanently invisible element. */
+.reveal {
+  animation: reveal 0.2s ease-out;
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+  }
+}
+
+/* ── Progress ─────────────────────────────────────────────────────────────── */
+
+.meter {
+  height: 0.6rem;
+  border: 1px solid var(--control-border);
+  border-radius: 999px;
+  background: var(--bg);
+  overflow: hidden;
+  margin: 0.5rem 0;
+}
+
+.meter-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.1s linear;
+}
+
+.search-stats {
+  display: grid;
+  gap: 0.4rem 1.2rem;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  margin: 0.7rem 0;
+  font-size: 0.9rem;
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.76rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.stat-value {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 1.02rem;
+}
+
+/* A number the page is projecting rather than measuring. Labelled in text as
+   well; the styling is a second signal, never the only one. */
+.projection {
+  color: var(--text-dim);
+}
+
+/* ── Disclosures ──────────────────────────────────────────────────────────── */
+
+details {
+  margin: 0.9rem 0;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-2);
+}
+
+summary {
+  cursor: pointer;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--accent-text);
+  border-radius: 9px;
+}
+
+details[open] summary {
+  border-bottom: 1px solid var(--border);
+  border-radius: 9px 9px 0 0;
+}
+
+.details-body {
+  padding: 0.3rem 0.9rem 0.8rem;
+}
+
+.details-body > :first-child {
+  margin-top: 0.6rem;
+}
+
+/* ── Callouts ─────────────────────────────────────────────────────────────── */
+
+.callout {
+  margin: 0.9rem 0;
+  padding: 0.7rem 0.95rem;
+  border-left: 3px solid;
+  border-radius: 0 8px 8px 0;
+  font-size: 0.92rem;
+}
+
+.callout-caveat {
+  border-color: var(--alarm);
+  background: color-mix(in oklab, var(--alarm) 9%, var(--surface));
+}
+
+.callout-source {
+  border-color: var(--info);
+  background: color-mix(in oklab, var(--info) 8%, var(--surface));
+}
+
+.callout-title {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+blockquote {
+  margin: 0.6rem 0;
+  padding-left: 0.9rem;
+  border-left: 2px solid var(--border);
+  color: var(--text-dim);
+  font-style: normal;
+}
+
+cite {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.82rem;
+  font-style: normal;
+  color: var(--text-dim);
+}
+
+/* ── The scripture footer ─────────────────────────────────────────────────── */
+
+.scripture-footer {
+  margin-top: 2.5rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 0.88rem;
+  text-align: center;
+}
+
+.scripture-footer p {
+  margin: 0.4rem 0;
+}
+
+.footer-links a {
+  color: var(--accent-text);
+}
+
+/* ── Reduced motion ───────────────────────────────────────────────────────── */
+
+/**
+ * Both animations in this file start from `opacity: 0` and ride a default
+ * (non-`forwards`) fill, so cancelling them restores the static `opacity: 1`
+ * rather than leaving content invisible. The gate asserts that: it sets the
+ * preference through `emulateMedia`, checks from inside the page that it took
+ * effect, and then fails if any visible text renders at zero opacity.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* A screen-reader-only label, for the few places a visible one would repeat
+   text already on screen. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
