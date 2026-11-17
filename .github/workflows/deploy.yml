@@ -57,7 +57,7 @@ jobs:
       # repos whose deploy job ran `test:a11y` alone, so their correctness
       # suites never blocked a publish. Here that would mean publishing a build
       # whose key derivation was broken so long as the browser specs passed.
-      - name: Unit tests (Vitest — published vectors, 158 tests)
+      - name: Unit tests (Vitest — published vectors)
         run: npm test
 
       - name: Build (typecheck gates the build)
@@ -69,22 +69,26 @@ jobs:
         with:
           path: dist
 
-  # The browser suites run in Playwright's own image so the browser binaries
-  # and Linux libraries match the pinned @playwright/test exactly.
+  # The browser suites, on the plain runner.
   #
-  # NEVER `npx playwright install --with-deps` — that apt step wedged 547 CI
-  # runs across this fleet in one afternoon. The container already has them.
+  # NOT in `mcr.microsoft.com/playwright:<tag>`. That image ships the browser
+  # build its own Playwright release expects, and `npm ci` installs whatever
+  # the lockfile resolved — so the two drift the moment Dependabot bumps
+  # @playwright/test, and the whole gate dies with "Executable doesn't exist at
+  # /ms-playwright/chromium_headless_shell-1255". That is exactly what happened
+  # on this lab's first CI run: 60 tests failed in 2ms apiece, none of them
+  # having launched a browser. Pinning the image to match would make a routine
+  # bump a two-file change that nothing checks.
+  #
+  # So the browser is installed from the same lockfile that pins the library,
+  # and the two cannot disagree. NEVER `--with-deps`: that apt step wedged 547
+  # CI runs across this fleet in one afternoon, and ubuntu-latest already
+  # carries what headless Chromium needs.
   browser-gate:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
       contents: read
-    container:
-      image: mcr.microsoft.com/playwright:v1.64.0-noble
-      options: --ipc=host
-    env:
-      # The Actions runner mounts a HOME the browsers cannot use in-container.
-      HOME: /root
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -100,15 +104,19 @@ jobs:
       - name: Install dependencies exactly from the lockfile
         run: npm ci
 
-      # CI=1 is what makes `reuseExistingServer: false` take effect, so this
-      # run cannot be answered by a server it did not start. Combined with
-      # --strictPort, the port either belongs to this run or the run fails.
+      - name: Install the browser the lockfile's Playwright expects
+        run: npx playwright install chromium
+
+      # CI=1 is set by Actions, which is what makes `reuseExistingServer: false`
+      # take effect, so this run cannot be answered by a server it did not
+      # start. Combined with --strictPort, the port either belongs to this run
+      # or the run fails.
       - name: Accessibility gate (axe-core, WCAG A/AA) and claims suite
         run: npm run test:e2e:all
 
       - name: Upload failure artifacts
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report
           path: |
