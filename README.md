@@ -70,6 +70,10 @@ The page states its own limits, and the claims suite asserts that it does:
    fields the learner declares known, and nothing else. It recovers the birth and expiry
    dates, derives the keys, and decrypts the recording. Shows guesses tried, the measured
    rate, and projected times for the larger spaces of exhibit 4, labelled as projections.
+   Measured in Chromium on the development machine: **38,714 guesses a second**,
+   single-threaded in one worker — about one and a half times the single-threaded Python
+   reference the analysis was sized against, and enough to open a 133,590-candidate space
+   in two seconds.
 6. **What Replaced It** — PACE, named and cited, not built. With the one sentence that
    matters: session keys "whose strength is independent of the entropy of the used password".
 
@@ -190,8 +194,9 @@ reproduced below, as test data.
 
 ## Build & Verify
 
-Vite + TypeScript, static, no backend. **158 Vitest tests** across eight files, plus a
-Playwright browser gate.
+Vite + TypeScript, static, no backend. **159 Vitest tests** across eight files and **60
+Playwright tests** (the WCAG gate at two viewports, a 44-test claims suite, and functional
+flows at desktop and phone width).
 
 Every published value was read from its primary source and then reproduced by computation
 twice — once by a from-scratch program written for the purpose, and again by this
@@ -232,11 +237,14 @@ cross-checked against the string the derivation consumes, every failure path nam
 actual cause, evidence retired when an input changes, the no-op guard, and the `[hidden]`
 probe. It also carries the lab's **negative claim** and both of its bite fixtures.
 
-**Mutation discipline** (`npm run mutate`) applies each recorded mutation as a concrete
-patch and requires four things of a kill: the owning test passed unmutated in the same run,
-the patch actually changed the file, the built bundle hash moved, and the run served the
-mutated code. A patch that does not compile is reported as DOES NOT BUILD and is never a
-kill. See `MUTATIONS.md` for the ledger.
+**Mutation discipline** (`npm run mutate`) applies each of 14 recorded mutations as a
+concrete patch and requires four things of a kill: the owning test passed unmutated in the
+same run, the patch actually changed the file, the run served the mutated code (the built
+bundle hash must move for a browser mutation), and a red run that looks like infrastructure
+rather than an assertion is reported INCONCLUSIVE instead of counted. A patch that does not
+compile is DOES NOT BUILD and is never a kill. **14 of 14 are killed**, including the two
+that §4.1d requires of the negative claim itself. The runner found three defects in the
+tests rather than the lab — see `MUTATIONS.md`.
 
 **Playwright port:** 4247, with `--strictPort`. Chosen by checking three things rather than
 two — the catalog registry, every sibling lab's config, and what was actually listening.
