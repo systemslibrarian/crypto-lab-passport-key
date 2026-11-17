@@ -68,6 +68,25 @@
   color-scheme: dark;
 }
 
+/**
+ * Border-box everywhere.
+ *
+ * Not a preference — a WCAG 1.4.10 fix. Under the default `content-box`, an
+ * element given `width: 100%` plus padding and a border computes WIDER than
+ * its container: `.cl-hero-why` is `width: 100%` with `.85rem 1.05rem` of
+ * padding and a 1px border, which at a 380px viewport came out as 348 + 33.6 +
+ * 2 = 383.6px inside a 348px column. That pushed the document's scroll width
+ * to 400px and the reflow oracle caught it on the arrival state — the first
+ * thing a phone-width reader sees. Every padded card, panel, input and meter
+ * in this file has the same shape, so the fix belongs here rather than on the
+ * one element that happened to be measured.
+ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 /* The longhand, not the `background` shorthand: axe and WebKit both miss the
    shorthand when deciding what a text node is painted over. */
 html {
