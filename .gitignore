@@ -1,0 +1,11 @@
+node_modules/
+dist/
+test-results/
+playwright-report/
+chat.md
+# The master template is deliberately UNTRACKED. A committed copy inside a lab
+# repo ages silently into a second, wrong standard; read the catalog's
+# ../crypto-lab/audits/_MASTER-TEMPLATE.md instead.
+_MASTER-TEMPLATE.md
+CRYPTO-LAB-TEMPLATE*.md
+.DS_Store
