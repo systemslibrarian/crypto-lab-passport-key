@@ -197,7 +197,7 @@ export function bitsOf(count: bigint): number {
  *
  * Note what is NOT a factor: the check digits. Each is a function of the field
  * it checks, so it adds no possibilities at all — a point the exhibit makes
- * explicitly, because four of MRZ_information's 24 characters look like they
+ * explicitly, because three of MRZ_information's 24 characters look like they
  * should contribute and do not.
  */
 export function countSpace(assumptions: Assumptions): SpaceCount {

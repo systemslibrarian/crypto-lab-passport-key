@@ -298,7 +298,7 @@ function renderCheckDigits(data: PrintedData): HTMLElement {
     el(
       'p',
       {},
-      'A check digit catches a misread character; it adds nothing a searcher has to guess, ' +
+      'A check digit can catch a transcription error. Some changes have the same check digit. It adds nothing a searcher has to guess, ' +
         'because it is computed from the field it follows. The rule is ICAO Doc 9303 Part 3 ' +
         'Section 4.9: weight the characters 7, 3, 1 repeating from the left, add the ' +
         'products, and take the remainder modulo 10.'
